@@ -27,6 +27,13 @@ Item {
   MappingProperty { id: deckIdxProp; path: screen.propertiesPath + ".deck_index" }
   property alias deckIdx: deckIdxProp.value
 
+  MappingProperty { id: leftDeckIdxProp; path: "mapping.settings.left_deck_index" }
+  property alias leftDeckIdx: leftDeckIdxProp.value
+
+  readonly property bool isLeftScreen: (deckIdx == leftDeckIdx) ? true : false
+
+  MappingProperty { id: showEndWarningProp; path: "mapping.settings.bottom_leds.show_end_warning" }
+  
   MappingProperty { id: showLoopSizeProp; path: screen.propertiesPath + ".show_loop_size" }
   property alias showLoopSize: showLoopSizeProp.value
 
@@ -52,7 +59,14 @@ Item {
   AppProperty { id: trackTitleProp; path: "app.traktor.decks." + deckIdx + ".content.title" }
   AppProperty { id: trackLengthProp; path: "app.traktor.decks." + deckIdx + ".track.content.track_length" }
   AppProperty { id: elapsedTimeProp; path: "app.traktor.decks." + deckIdx + ".track.player.elapsed_time"  }
-  AppProperty { id: trackEndWarningProp; path: "app.traktor.decks." + deckIdx + ".track.track_end_warning"  }
+  AppProperty { id: trackEndWarningProp; path: "app.traktor.decks." + deckIdx + ".track.track_end_warning" }
+
+  AppProperty { id: remixBeatPosProp; path: "app.traktor.decks." + deckIdx + ".remix.current_beat_pos" }
+  AppProperty { id: nextCuePointProp; path: "app.traktor.decks." + deckIdx + ".track.player.next_cue_point" }
+  AppProperty { id: trackBPMProp;      path: "app.traktor.decks." + deckIdx + ".tempo.base_bpm" }
+
+  readonly property double cuePos: (nextCuePointProp.value >= 0) ? nextCuePointProp.value : trackLengthProp.value * 1000
+  readonly property string beatsToCue: computeBarsBeatsFromPosition(((elapsedTimeProp.value * 1000 - cuePos) * trackBPMProp.value) / 60000.0)
 
   AppProperty { id: loopSizeProp; path: "app.traktor.decks." + deckIdx + ".loop.size" }
   AppProperty { id: loopActiveProp; path: "app.traktor.decks." + deckIdx + ".loop.active" }
@@ -75,6 +89,35 @@ Item {
   MappingProperty { id: blinkerProp; path: "mapping.state.blinker" }
   property alias blinkOnOff: blinkerProp.value
 
+  MappingProperty { id: customBeatCounterEngagedProp; path: "mapping.settings.custom_beatcounter_engaged" }
+  property alias customBeatCounterEngaged: customBeatCounterEngagedProp.value
+  MappingProperty { id: customBeatCounterPhraseLengthProp; path: "mapping.settings.custom_phrase_length" }
+  property alias customBeatCounterPhraseLength: customBeatCounterPhraseLengthProp.value
+
+  MappingProperty { id: browserModeProp; path: "mapping.state.browser_mode" }
+  MappingProperty { id: customBrowserModeProp; path: "mapping.settings.custom_browser_mode" }
+  // AppProperty { id: browserFullScreen; path:"app.traktor.browser.full_screen" }
+  AppProperty { id: previewLengthProp; path: "app.traktor.browser.preview_content.track_length" }
+  AppProperty { id: previewElapsedTimeProp; path: "app.traktor.browser.preview_player.elapsed_time"  }
+  AppProperty { id: previewDeckLoadedProp; path: "app.traktor.browser.preview_player.is_loaded"  }
+  AppProperty { id: previewDeckPlayingProp; path: "app.traktor.browser.preview_player.play"  }
+
+  //----------------------------------------------------------------------------------------------------------
+
+  function computeBarsBeatsFromPosition(beat) {    
+    var phraseLen   = Math.pow (2, customBeatCounterPhraseLength) // 8 // 4
+    var rawInt      = parseInt(beat+0.0001); //value 0.0001 to counter rounding error offset
+    var prefix      = (beat < 0) ? "-" : "";    
+    var absBeats    = Math.abs(rawInt);    
+    var phrases     = parseInt(absBeats / (phraseLen * 4) ) + 1; 
+    var bars        = parseInt((absBeats / 4) % phraseLen) + 1;
+    var phrasesBars = (customBeatCounterPhraseLength == 0) ? phrases + "." : phrases + "." + bars + "."
+    var beatInBar   = parseInt(absBeats % 4) + 1;
+    // return prefix + phrases + "." + bars + "." + beatInBar;
+    return prefix + phrasesBars + beatInBar;
+  }
+
+  //----------------------------------------------------------------------------------------------------------
   Rectangle {
     color: "black"
     anchors.fill: parent
@@ -87,7 +130,8 @@ Item {
 
       Item
       {
-        visible: !showLoopSize && !showBPMInfo
+        // visible: !showLoopSize && !showBPMInfo
+        visible: !showLoopSize && !showBPMInfo && !browserModeProp.value
         anchors.fill: parent
 
         // Track title
@@ -106,7 +150,7 @@ Item {
 
         // Remaining/Elapsed Time
         ThinText {
-            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift
+            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift && !customBeatCounterEngaged
 
             anchors {
                 top: parent.top
@@ -114,14 +158,36 @@ Item {
                 leftMargin: -13
                 topMargin: 19
             }
+            font.pixelSize: 32
             font.capitalization: Font.AllUppercase
             text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
+            // text: " " + customBeatCounterEngaged ? (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : beatsToCue) : (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
+            // remixBeatPosProp
+            // (deckTypeProp.value === DeckType.Remix)
+            color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
+        }
+
+        // Remaining/Elapsed [Bars].[Beats]
+        ThinText {
+            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift && customBeatCounterEngaged
+
+            anchors {
+                top: parent.top
+                left: parent.left
+                leftMargin: -13
+                topMargin: 19
+            }
+            font.pixelSize: 32
+            font.capitalization: Font.AllUppercase
+            text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : beatsToCue)
             color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
         }
 
         // Loop headline
         ThickText {
-            visible: shift && loopShiftAction == beatjump_loop
+            // visible: shift && loopShiftAction == beatjump_loop
+            // visible: false
+            visible: shift && !customBrowserModeProp.value && (loopShiftAction == beatjump_loop)
 
             anchors {
                 top: parent.top
@@ -135,7 +201,9 @@ Item {
 
         // Loop size (big)
         Rectangle {
-          visible: (deckDisplayMainInfo == loopSizeInfo) || (shift && loopShiftAction == beatjump_loop)
+          // visible: (deckDisplayMainInfo == loopSizeInfo) || (shift && loopShiftAction == beatjump_loop)
+          // visible: (deckDisplayMainInfo == loopSizeInfo)
+          visible: (deckDisplayMainInfo == loopSizeInfo) || ( shift && !customBrowserModeProp.value && (loopShiftAction == beatjump_loop) )
 
           anchors {
               top: parent.top
@@ -185,9 +253,25 @@ Item {
           }
         }
 
+        // [SHIFT] Remaining time
+        ThickText {
+            visible: shift && customBeatCounterEngaged && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                topMargin: 0
+                leftMargin: 1
+            }
+            text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
+        }
+        
         // Resulting key (big)
         Rectangle {
-          visible: shift && (loopShiftAction == key_adjust)
+          // visible: shift && (loopShiftAction == key_adjust)
+          // visible: shift
+          visible: shift && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
 
           anchors {
               top: parent.top
@@ -211,7 +295,9 @@ Item {
 
         // Key offset
         Rectangle {
-          visible: shift && (loopShiftAction == key_adjust)
+          // visible: shift && (loopShiftAction == key_adjust)
+          // visible: shift
+          visible: shift && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
 
           color: "black"
           anchors {
@@ -266,7 +352,8 @@ Item {
 
       // Loop Overlay
       Item {
-        visible: showLoopSize && !showBPMInfo
+        // visible: showLoopSize && !showBPMInfo
+        visible: showLoopSize && !showBPMInfo && !browserModeProp.value
         anchors.fill: parent
 
         // Loop headline
@@ -307,7 +394,8 @@ Item {
 
       // BPM Overlay
       Item {
-        visible: !showLoopSize && showBPMInfo
+        // visible: !showLoopSize && showBPMInfo
+        visible: !showLoopSize && showBPMInfo && !browserModeProp.value
         anchors.fill: parent
 
         // BPM
@@ -334,10 +422,54 @@ Item {
         }
       }
 
+      // BrowserMode Overlay
+      Item {
+        visible: browserModeProp.value
+        anchors.fill: parent
+
+        // Browse Headline
+          ThinText {
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                topMargin: 0
+                leftMargin: 4
+            }
+            font.pixelSize: 18
+            font.capitalization: Font.AllUppercase
+            text: "BROWSE LIST"
+        }
+        
+        Rectangle {
+          anchors {
+              top: parent.top
+              left: parent.left
+              // leftMargin: -13
+              leftMargin: 2
+              topMargin: 20
+          }
+          width: parent.width
+          height: 35
+          color: "black"
+
+          ThinText {
+              anchors.fill: parent 
+              font.pixelSize: 18
+              font.capitalization: Font.AllUppercase
+              horizontalAlignment: Text.AlignLeft
+
+              text:  isLeftScreen ? " BROWSE TREE" : shift ? "FAVORITES PREP" : "PREVIEW PLAYER"
+              color:  isLeftScreen || shift ? "white" : previewDeckPlayingProp.value && screen.blinkOnOff ? "black" : "white"
+          }
+        }
+      }
+
       // Track progress
       Rectangle {
         z: 1
         color: "black"
+        visible: !browserModeProp.value
         anchors {
           bottom: parent.bottom
           left: parent.left
@@ -353,7 +485,8 @@ Item {
         height: 6
 
         Rectangle {
-          color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
+          // color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
+          color: (!trackEndWarningProp.value || screen.blinkOnOff) || showEndWarningProp.value ? "white" : "black"
           anchors {
             top: parent.top
             bottom: parent.bottom
@@ -365,6 +498,37 @@ Item {
       }
     }
 
+      // Preview Player progress
+      Rectangle {
+        z: 1
+        color: "black"
+        visible: browserModeProp.value && !(isLeftScreen)
+        anchors {
+          bottom: parent.bottom
+          left: parent.left
+
+          leftMargin: 0
+          bottomMargin: 0
+        }
+        border {
+          color: "white"
+          width: 1
+        }
+        width: screen.width
+        height: 6
+
+        Rectangle {
+          color: "white"
+          anchors {
+            top: parent.top
+            bottom: parent.bottom
+            left: parent.left
+            margins: 1
+          }
+          width: previewDeckLoadedProp.value ? Math.round(screen.width * previewElapsedTimeProp.value / previewLengthProp.value) : 0
+        }
+      }
+      
     // Live Deck
     Item
     {
@@ -383,7 +547,8 @@ Item {
 
     // Deck assignment
     Item {
-      visible: deviceSetupState == DeviceSetupState.unassigned
+      // visible: deviceSetupState == DeviceSetupState.unassigned
+      visible: deviceSetupState != DeviceSetupState.assigned
       anchors.fill: parent
 
       Rectangle {

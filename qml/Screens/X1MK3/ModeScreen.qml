@@ -21,6 +21,9 @@ Item {
   MappingProperty { id: deviceSetupStateProp; path: screen.propertiesPath + ".device_setup_state" }
   property alias deviceSetupState: deviceSetupStateProp.value
 
+  MappingProperty { id: deviceSetupPageProp; path: screen.propertiesPath + ".device_setup_page" }
+  property alias deviceSetupPage: deviceSetupPageProp.value
+
   MappingProperty { id: leftDeckIdxProp; path: screen.propertiesPath + ".left_deck_index" }
   property alias leftDeckIdx: leftDeckIdxProp.value
 
@@ -42,6 +45,10 @@ Item {
   AppProperty { id: deckCLevelProp; path: "app.traktor.mixer.channels.3.level.prefader.linear.sum" }
   AppProperty { id: deckDLevelProp; path: "app.traktor.mixer.channels.4.level.prefader.linear.sum" }
   readonly property real metersFactor: 0.8
+
+  AppProperty { id: masterLevelProp; path: "app.traktor.mixer.master.level.sum" }
+  AppProperty { id: masterLevelClipProp; path: "app.traktor.mixer.master.level.clip.sum" }
+  AppProperty { id: limiterStateProp; path: "app.traktor.mixer.master.limiter_state" }
 
   function deckImage(layer, deckIdx)
   {
@@ -127,17 +134,81 @@ Item {
       visible: (deviceSetupState == DeviceSetupState.assigned) &&
                (fxSectionLayer.value == FXSectionLayer.mixer)
 
-      ThinText {
+      // Master level meter
+      Item {
+        anchors {
+          top: parent.top
+          left: parent.left
+          right: parent.right
+        }
+        height: 20
+
+        Image {
           anchors {
               top: parent.top
               left: parent.left
-              right: parent.right
-              topMargin: -8
-              leftMargin: -12
+              topMargin: 10
+              leftMargin: 10
           }
-          text: " MIXER"
-          horizontalAlignment: Text.AlignHCenter
+          source: "Images/MasterMeter.png"
+
+          // Master level
+          Rectangle
+          {
+            anchors {
+                top: parent.top
+                left: parent.left
+                bottom: parent.bottom
+            }
+
+            color: "white"
+            width: Math.min(masterLevelProp.value * parent.width * 0.9, 86)
+          }
+
+          // Master clip
+          Rectangle
+          {
+            visible: masterLevelClipProp.value != 0
+            anchors {
+                top: parent.top
+                left: parent.left
+                bottom: parent.bottom
+                leftMargin: 89
+            }
+
+            color: "white"
+            width: 21
+          }
+        }
+
+        // Limiter state
+        Rectangle
+        {
+          visible: limiterStateProp.value != 0
+          anchors {
+              top: parent.top
+              left: parent.left
+              bottom: parent.bottom
+              topMargin: 6
+              leftMargin: 94
+          }
+
+          color: "white"
+          width: 2
+        }
       }
+
+      // ThinText {
+          // anchors {
+              // top: parent.top
+              // left: parent.left
+              // right: parent.right
+              // topMargin: -8
+              // leftMargin: -12
+          // }
+          // text: " MIXER"
+          // horizontalAlignment: Text.AlignHCenter
+      // }
   
       Image {
           anchors {
@@ -250,7 +321,8 @@ Item {
   
       ThinText {
           anchors.fill: parent
-          text: "DEVICE SETUP"
+          // text: "DEVICE SETUP"
+          text: (deviceSetupPage == 1) ? "SETUP PAGE 1" : "SETUP PAGE 2"
           horizontalAlignment: Text.AlignHCenter
           wrapMode: Text.WordWrap
           lineHeight: 29
@@ -264,7 +336,8 @@ Item {
   
       ThinText {
           anchors.fill: parent
-          text: "¢"
+          // text: "¢"
+          text: "🦋"
           font.pixelSize: 60
           horizontalAlignment: Text.AlignHCenter
           wrapMode: Text.WordWrap
