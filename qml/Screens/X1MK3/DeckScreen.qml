@@ -55,17 +55,30 @@ Item {
   Defines.Utils  { id: utils }
 
   AppProperty { id: deckTypeProp; path: "app.traktor.decks." + deckIdx + ".type" }
-  property bool isRemixDeck: (deckTypeProp.value === DeckType.Remix)
   AppProperty { id: deckPlayProp; path: "app.traktor.decks." + deckIdx + ".play" }
   AppProperty { id: trackTitleProp; path: "app.traktor.decks." + deckIdx + ".content.title" }
   AppProperty { id: trackLengthProp; path: "app.traktor.decks." + deckIdx + ".track.content.track_length" }
   AppProperty { id: elapsedTimeProp; path: "app.traktor.decks." + deckIdx + ".track.player.elapsed_time"  }
   AppProperty { id: trackEndWarningProp; path: "app.traktor.decks." + deckIdx + ".track.track_end_warning" }
 
-  AppProperty { id: remixBeatPosProp; path: "app.traktor.decks." + deckIdx + ".remix.current_beat_pos" }
-  readonly property string  beatPositionString:   remixBeatPosProp.description
+  property bool isRemixDeck: (deckTypeProp.value === DeckType.Remix)
 
-  AppProperty { id: trackBPMProp;      path: "app.traktor.decks." + deckIdx + ".tempo.base_bpm" }
+  AppProperty { id: remixQuantProp; path: "app.traktor.decks." + deckIdx + ".remix.quant" }
+  property bool remixQuantActive: remixQuantProp.value
+
+  AppProperty { id: remixQuantIndexProp; path: "app.traktor.decks." + deckIdx + ".remix.quant_index" }
+  readonly property string remixQuantIndexString: remixQuantIndexProp.description
+  
+  AppProperty { id: remixBeatPosProp; path: "app.traktor.decks." + deckIdx + ".remix.current_beat_pos" }
+  readonly property string beatPositionString: remixBeatPosProp.description
+  
+  AppProperty { id: remixCaptureSourceProp; path: "app.traktor.decks." + deckIdx + ".capture_source"  }
+  readonly property string remixCaptureSourceString: remixCaptureSourceProp.description
+  
+  MappingProperty { id: quantizeEngagedProp; path: screen.propertiesPath + "." + deckIdx + ".quantize_engaged" }
+  property alias quantizeEngaged: quantizeEngagedProp.value
+
+  AppProperty { id: trackBPMProp; path: "app.traktor.decks." + deckIdx + ".tempo.base_bpm" }
 
   AppProperty { id: nextCuePointProp; path: "app.traktor.decks." + deckIdx + ".track.player.next_cue_point" }
   readonly property double cuePos: (nextCuePointProp.value >= 0) ? nextCuePointProp.value : trackLengthProp.value * 1000
@@ -158,7 +171,8 @@ Item {
             anchors {
                 top: parent.top
                 left: parent.left
-                leftMargin: -13
+                // leftMargin: -13
+                leftMargin: 1
                 topMargin: 19
             }
             font.pixelSize: 32
@@ -176,7 +190,8 @@ Item {
             anchors {
                 top: parent.top
                 left: parent.left
-                leftMargin: -13
+                // leftMargin: -13
+                leftMargin: 1
                 topMargin: 19
             }
             font.pixelSize: 32
@@ -192,7 +207,8 @@ Item {
             anchors {
                 top: parent.top
                 left: parent.left
-                leftMargin: -13
+                // leftMargin: -13
+                leftMargin: 1
                 topMargin: 19
             }
             font.pixelSize: 32
@@ -244,6 +260,76 @@ Item {
           }
         }
 
+        // Capture Source / Quantization
+        ThickText {
+            visible: shift && isRemixDeck && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
+
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                topMargin: 0
+                leftMargin: 1
+            }
+            text: quantizeEngaged ? "QUANT" : "SOURCE"
+        }
+
+        // Deck (big)
+        Rectangle {
+            visible: shift && isRemixDeck && !quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
+
+          anchors {
+              top: parent.top
+              left: parent.left
+              // leftMargin: -13
+              leftMargin: 2
+              topMargin: 20
+          }
+          width: 85
+          height: 35
+          color: "black"
+
+          ThinText {
+              anchors.fill: parent 
+              // font.pixelSize: 48
+              font.pixelSize: 24
+              font.capitalization: Font.AllUppercase
+              horizontalAlignment: Text.AlignHCenter
+
+              // text: " " + screen.loopText[loopSizeProp.value]
+              text: " " + remixCaptureSourceString
+              color: "white"
+          }
+        }
+
+        // Quantize Index (Big)
+        Rectangle {
+            visible: shift && isRemixDeck && quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
+
+          anchors {
+              top: parent.top
+              left: parent.left
+              leftMargin: -13
+              // leftMargin: 0
+              topMargin: 20
+          }
+          width: 85
+          height: 35
+          color: remixQuantActive ? "white" : "black"
+
+          ThinText {
+              anchors.fill: parent 
+              // font.pixelSize: 48
+              font.pixelSize: 40
+              font.capitalization: Font.AllUppercase
+              horizontalAlignment: Text.AlignHCenter
+
+              // text: " " + screen.loopText[loopSizeProp.value]
+              text: " " + remixQuantIndexString
+              color: remixQuantActive ? "black" : "white"
+          }
+        }
+
         // Assigned deck
         Rectangle {
           visible: !shift
@@ -289,7 +375,8 @@ Item {
         Rectangle {
           // visible: shift && (loopShiftAction == key_adjust)
           // visible: shift
-          visible: shift && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+          // visible: shift && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+          visible: shift && !isRemixDeck && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
 
           anchors {
               top: parent.top
@@ -315,7 +402,8 @@ Item {
         Rectangle {
           // visible: shift && (loopShiftAction == key_adjust)
           // visible: shift
-          visible: shift && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+          // visible: shift && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+          visible: shift && !isRemixDeck && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
 
           color: "black"
           anchors {
