@@ -70,7 +70,7 @@ Item {
   readonly property string remixQuantIndexString: remixQuantIndexProp.description
   
   AppProperty { id: remixBeatPosProp; path: "app.traktor.decks." + deckIdx + ".remix.current_beat_pos" }
-  readonly property string beatPositionString: remixBeatPosProp.description
+  readonly property string remixBeatPositionString: " " + remixBeatPosProp.description
   
   AppProperty { id: remixCaptureSourceProp; path: "app.traktor.decks." + deckIdx + ".capture_source"  }
   readonly property string remixCaptureSourceString: remixCaptureSourceProp.description
@@ -95,8 +95,8 @@ Item {
   AppProperty { id: resultingKeyProp; path: "app.traktor.decks." + deckIdx + ".track.key.resulting.quantized" }
 
   readonly property bool isLoaded: (trackLengthProp.value > 0) || (deckTypeProp.value === DeckType.Remix)
-  readonly property string remainingTime: isLoaded ? utils.computeRemainingTimeString(trackLengthProp.value, elapsedTimeProp.value) : "00:00"
-  readonly property string elapsedTime: isLoaded ? utils.convertToTimeString(elapsedTimeProp.value) : "00:00"
+  readonly property string remainingTime: " " + isLoaded ? utils.computeRemainingTimeString(trackLengthProp.value, elapsedTimeProp.value) : "00:00"
+  readonly property string elapsedTime: " " + isLoaded ? utils.convertToTimeString(elapsedTimeProp.value) : "00:00"
 
   // Loop encoder actions
   readonly property int beatjump_loop:      0
@@ -123,7 +123,7 @@ Item {
   function computeBarsBeatsFromPosition(beat) {    
     var phraseLen   = Math.pow (2, customBeatCounterPhraseLength) // 8 // 4
     var rawInt      = parseInt(beat+0.0001); //value 0.0001 to counter rounding error offset
-    var prefix      = (beat < 0) ? "-" : "";    
+    var prefix      = (beat < 0) ? "-" : " ";    
     var absBeats    = Math.abs(rawInt);    
     var phrases     = parseInt(absBeats / (phraseLen * 4) ) + 1; 
     var bars        = parseInt((absBeats / 4) % phraseLen) + 1;
@@ -172,14 +172,12 @@ Item {
                 top: parent.top
                 left: parent.left
                 // leftMargin: -13
-                leftMargin: 1
+                leftMargin: 0
                 topMargin: 19
             }
             font.pixelSize: 32
             font.capitalization: Font.AllUppercase
-            text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
-            // text: " " + customBeatCounterEngaged ? (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : beatsToCue) : (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
-            // remixBeatPosProp
+            text: "" + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
             color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
         }
 
@@ -191,12 +189,12 @@ Item {
                 top: parent.top
                 left: parent.left
                 // leftMargin: -13
-                leftMargin: 1
+                leftMargin: 0
                 topMargin: 19
             }
             font.pixelSize: 32
             font.capitalization: Font.AllUppercase
-            text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : beatsToCue)
+            text: "" + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : beatsToCue)
             color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
         }
 
@@ -208,13 +206,27 @@ Item {
                 top: parent.top
                 left: parent.left
                 // leftMargin: -13
-                leftMargin: 1
+                leftMargin: 0
                 topMargin: 19
             }
             font.pixelSize: 32
             font.capitalization: Font.AllUppercase
-            text: " " + beatPositionString
+            text: "" + remixBeatPositionString
             color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
+        }
+
+        // [SHIFT] Remaining time
+        ThickText {
+            visible: shift && customBeatCounterEngaged && !isRemixDeck && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                topMargin: 0
+                leftMargin: 1
+            }
+            text: "" + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
         }
 
         // Loop headline
@@ -274,67 +286,38 @@ Item {
             text: quantizeEngaged ? "QUANT" : "SOURCE"
         }
 
-        // Deck (big)
+        // Quantize (small)
         Rectangle {
-            visible: shift && isRemixDeck && !quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
+          visible: shift && isRemixDeck && !quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
 
-          anchors {
-              top: parent.top
-              left: parent.left
-              // leftMargin: -13
-              leftMargin: 2
-              topMargin: 20
-          }
-          width: 85
-          height: 35
           color: "black"
+          anchors {
+            top: parent.top
+            right: parent.right
+
+            rightMargin: 0
+            topMargin: 13 // 14
+          }
+          width: 32
+          height: 19
 
           ThinText {
-              anchors.fill: parent 
-              // font.pixelSize: 48
+              anchors.fill: parent
+              anchors.rightMargin: 7
               font.pixelSize: 24
               font.capitalization: Font.AllUppercase
               horizontalAlignment: Text.AlignHCenter
 
-              // text: " " + screen.loopText[loopSizeProp.value]
-              text: " " + remixCaptureSourceString
+              text: " Q.I"
               color: "white"
           }
         }
 
-        // Quantize Index (Big)
+        // Quantize Index (small)
         Rectangle {
-            visible: shift && isRemixDeck && quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
+          visible: shift && isRemixDeck && !quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
 
-          anchors {
-              top: parent.top
-              left: parent.left
-              leftMargin: -13
-              // leftMargin: 0
-              topMargin: 20
-          }
-          width: 85
-          height: 35
           color: remixQuantActive ? "white" : "black"
-
-          ThinText {
-              anchors.fill: parent 
-              // font.pixelSize: 48
-              font.pixelSize: 40
-              font.capitalization: Font.AllUppercase
-              horizontalAlignment: Text.AlignHCenter
-
-              // text: " " + screen.loopText[loopSizeProp.value]
-              text: " " + remixQuantIndexString
-              color: remixQuantActive ? "black" : "white"
-          }
-        }
-
-        // Assigned deck
-        Rectangle {
-          visible: !shift
-
-          color: deckPlayProp.value ? "white" : "black"
           anchors {
             top: parent.top
             right: parent.right
@@ -352,25 +335,67 @@ Item {
               font.capitalization: Font.AllUppercase
               horizontalAlignment: Text.AlignHCenter
 
-              text: " " + screen.deckText[deckIdx - 1]
-              color: deckPlayProp.value ? "black" : "white"
+              text: " " + remixQuantIndexString
+              color: remixQuantActive ? "black" : "white"
           }
         }
 
-        // [SHIFT] Remaining time
-        ThickText {
-            visible: shift && customBeatCounterEngaged && !isRemixDeck && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+        // Capture Source (big)
+        Rectangle {
+          visible: shift && isRemixDeck && !quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
 
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-                topMargin: 0
-                leftMargin: 1
-            }
-            text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
+          anchors {
+            top: parent.top
+            left: parent.left
+            // leftMargin: -13
+            leftMargin: 2
+            topMargin: 20
+          }
+          width: 85
+          height: 35
+          color: "black"
+
+          ThinText {
+            anchors.fill: parent 
+            // font.pixelSize: 48
+            font.pixelSize: 24
+            font.capitalization: Font.AllUppercase
+            horizontalAlignment: Text.AlignHCenter
+
+            // text: " " + screen.loopText[loopSizeProp.value]
+            text: " " + remixCaptureSourceString
+            color: "white"
+          }
         }
-        
+
+        // Quantize Index (Big)
+        Rectangle {
+          visible: shift && isRemixDeck && quantizeEngaged && ( ((loopShiftAction == key_adjust) && !customBrowserModeProp.value ) || (customBrowserModeProp.value && !browserModeProp.value) )
+
+          anchors {
+            top: parent.top
+            left: parent.left
+            leftMargin: -13
+            // leftMargin: 0
+            topMargin: 20
+          }
+          width: 85
+          height: 35
+          color: remixQuantActive ? "white" : "black"
+
+          ThinText {
+            anchors.fill: parent 
+            // font.pixelSize: 48
+            font.pixelSize: 40
+            font.capitalization: Font.AllUppercase
+            horizontalAlignment: Text.AlignHCenter
+
+            // text: " " + screen.loopText[loopSizeProp.value]
+            text: " " + remixQuantIndexString
+            color: remixQuantActive ? "black" : "white"
+          }
+        }
+
         // Resulting key (big)
         Rectangle {
           // visible: shift && (loopShiftAction == key_adjust)
@@ -379,22 +404,22 @@ Item {
           visible: shift && !isRemixDeck && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
 
           anchors {
-              top: parent.top
-              left: parent.left
-              leftMargin: -13
-              topMargin: 20
+            top: parent.top
+            left: parent.left
+            leftMargin: -13
+            topMargin: 20
           }
           width: 85
           height: 35
           color: "black"
 
           ThinText {
-              anchors.fill: parent 
-              font.pixelSize: 48
-              horizontalAlignment: Text.AlignHCenter
+            anchors.fill: parent 
+            font.pixelSize: 48
+            horizontalAlignment: Text.AlignHCenter
 
-              text: " " + resultingKeyProp.value
-              color: "white"
+            text: " " + resultingKeyProp.value
+            color: "white"
           }
         }
 
@@ -427,7 +452,7 @@ Item {
               color: "white"
           }
         }
-
+        
         // Loop size (small)
         Rectangle {
           visible: (deckDisplayMainInfo != loopSizeInfo) && !shift
@@ -438,10 +463,10 @@ Item {
             right: parent.right
 
             rightMargin: 0
-            topMargin: 14
+            topMargin: 14 // 18
           }
           width: 32
-          height: 19
+          height: 19 // 18
 
           ThinText {
               anchors.fill: parent
@@ -454,6 +479,34 @@ Item {
               color: loopActiveProp.value ? "black" : "white"
           }
         }
+        
+        // Assigned deck
+        Rectangle {
+          visible: !shift
+
+          color: deckPlayProp.value ? "white" : "black"
+          anchors {
+            top: parent.top
+            right: parent.right
+
+            rightMargin: 0
+            topMargin: 35 // 36
+          }
+          width: 32
+          height: 19 // 18
+
+          ThinText {
+              anchors.fill: parent
+              anchors.rightMargin: 7
+              font.pixelSize: 24
+              font.capitalization: Font.AllUppercase
+              horizontalAlignment: Text.AlignHCenter
+
+              text: " " + screen.deckText[deckIdx - 1]
+              color: deckPlayProp.value ? "black" : "white"
+          }
+        }
+
       }
 
       // Loop Overlay
