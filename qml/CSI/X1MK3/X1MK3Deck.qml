@@ -72,7 +72,6 @@ Module
   property bool isSlaveDeck: syncProp.value && (module.masterId != module.deckIdx)
 
   AppProperty { id: fxMode; path: "app.traktor.fx.4fx_units" }
-  // AppProperty { id: deckTypeProp; path: "app.traktor.decks." + module.deckIdx + ".type" }
 
   // Browser
   AppProperty { id: loadPrimary; path: "app.traktor.decks." + module.deckIdx + ".load.selected" }
@@ -289,6 +288,11 @@ Module
   // AppProperty { id: remixPlayersColorIdProp_2; path: "app.traktor.decks." + module.deckIdx + ".remix.players.2.rows." + remixPlayersActiveCellProp_2.value + ".color_id"; }
   // AppProperty { id: remixPlayersColorIdProp_3; path: "app.traktor.decks." + module.deckIdx + ".remix.players.3.rows." + remixPlayersActiveCellProp_3.value + ".color_id"; }
   // AppProperty { id: remixPlayersColorIdProp_4; path: "app.traktor.decks." + module.deckIdx + ".remix.players.4.rows." + remixPlayersActiveCellProp_4.value + ".color_id"; }
+
+  AppProperty { id: remixQuantProp; path: "app.traktor.decks." + module.deckIdx + ".remix.quant" }
+  property bool quantizeEngaged: false
+  property bool resetQuantizeEngaged: false
+  MappingPropertyDescriptor { id: quantizeEngagedProp; path: propertiesPath + ".quantize_engaged"; type: MappingPropertyDescriptor.Boolean; value: false; }
 
   MappingPropertyDescriptor {
     id: remixPlayersVolumeFilterProp_1
@@ -595,6 +599,7 @@ Module
   Browser { name: "browser" }
   ButtonGestures { name: "browser_load_gestures" }
 
+  RemixDeck { name: "remix"; channel: module.deckIdx; size: RemixDeck.Small }
 
   WiresGroup
   {
@@ -609,7 +614,8 @@ Module
     {
       // enabled: module.shift
       // enabled: module.shift && !browserModeProp.value
-      enabled: module.shift && !browserModeProp.value && customBrowserModeProp.value
+      // enabled: module.shift && !browserModeProp.value && customBrowserModeProp.value
+      enabled: module.shift && !browserModeProp.value && customBrowserModeProp.value && (deckTypeProp.value != DeckType.Remix)
 
       // Wire { from: "%surface%.loop"; to: "loop.move"; enabled: loopShiftAction == beatjump_loop }
       // Wire { from: "%surface%.loop"; to: "key_control.coarse"; enabled: loopShiftAction == key_adjust }
@@ -622,7 +628,8 @@ Module
       enabled: module.shift && !browserModeProp.value && !customBrowserModeProp.value
 
       Wire { from: "%surface%.loop"; to: "loop.move"; enabled: loopShiftAction == beatjump_loop }
-      Wire { from: "%surface%.loop"; to: "key_control.coarse"; enabled: loopShiftAction == key_adjust }
+      // Wire { from: "%surface%.loop"; to: "key_control.coarse"; enabled: (loopShiftAction == key_adjust) }
+      Wire { from: "%surface%.loop"; to: "key_control.coarse"; enabled: (loopShiftAction == key_adjust) && (deckTypeProp.value != DeckType.Remix) }
     }
 
     WiresGroup
@@ -715,6 +722,55 @@ Module
         }
       }
     }
+  }
+
+  WiresGroup
+  {
+    enabled: module.active && module.shift && (deckTypeProp.value == DeckType.Remix) && ((customBrowserModeProp.value && !browserModeProp.value.value) || (!customBrowserModeProp.value && (loopShiftAction == key_adjust)))
+
+    Wire { from: "%surface%.loop.push";  to: HoldPropertyAdapter  { path: propertiesPath + ".quantize_engaged"; value: true } }
+    Wire { from: "%surface%.loop.push";  to: TogglePropertyAdapter  { path: "app.traktor.decks." + module.deckIdx + ".remix.quant" } }
+    // Wire {
+      // from: "%surface%.loop.push"
+      // to: ButtonScriptAdapter {
+        // onPress: {
+        // }
+        // onRelease: {
+          // module.quantizeEngaged = false;
+          // if (module.resetQuantizeEngaged)
+          // {
+            // if (module.isSlaveDeck) {
+              // clockBPMProp.value = trackBaseBPMProp.value;
+            // }
+            // else tempoAdjProp.value = 0.0
+          // }
+        // }
+      // }
+    // }
+    
+    Wire { from: "%surface%.loop.turn";  to: "remix.capture_source"; enabled: !quantizeEngagedProp.value }
+    
+    Wire { from: "%surface%.loop.turn"; to: EncoderScriptAdapter { onTick: { remixQuantProp.value = true } } enabled: quantizeEngagedProp.value }
+    // Wire {
+      // from: "%surface%.loop.turn"
+      // to: EncoderScriptAdapter {
+        // onTick: {
+          // module.resetQuantizeEngaged = false;
+          // remixQuantProp.value = true;
+        // }
+        // onIncrement: {
+          // if (module.isSlaveDeck) clockBPMProp.value = clockBPMProp.value + (module.quantizeEngaged ? 1 : 0.01)
+          // else bpmProp.value = bpmProp.value + (module.quantizeEngaged ? 1 : 0.01)
+        // }
+        // onDecrement: {
+          // if (module.isSlaveDeck) clockBPMProp.value = clockBPMProp.value - (module.quantizeEngaged ? 1 : 0.01)
+          // else bpmProp.value = bpmProp.value - (module.quantizeEngaged ? 1 : 0.01)
+        // }
+      // }
+    // }
+
+    
+    Wire { from: "%surface%.loop.turn";  to: RelativePropertyAdapter { path:"app.traktor.decks." + module.deckIdx + ".remix.quant_index"; mode: RelativeMode.Stepped } enabled: quantizeEngagedProp.value }
   }
 
   // Absolute/Relative

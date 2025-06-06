@@ -273,7 +273,7 @@ Item {
 
         // [SHIFT] Remaining time
         ThickText {
-            visible: shift && customBeatCounterEngaged && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
+            visible: shift && customBeatCounterEngaged && !isRemixDeck && (customBrowserModeProp.value || (!customBrowserModeProp.value && (loopShiftAction == key_adjust) ) )
 
             anchors {
                 top: parent.top
