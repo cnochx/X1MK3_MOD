@@ -55,6 +55,7 @@ Item {
   Defines.Utils  { id: utils }
 
   AppProperty { id: deckTypeProp; path: "app.traktor.decks." + deckIdx + ".type" }
+  property bool isRemixDeck: (deckTypeProp.value === DeckType.Remix)
   AppProperty { id: deckPlayProp; path: "app.traktor.decks." + deckIdx + ".play" }
   AppProperty { id: trackTitleProp; path: "app.traktor.decks." + deckIdx + ".content.title" }
   AppProperty { id: trackLengthProp; path: "app.traktor.decks." + deckIdx + ".track.content.track_length" }
@@ -62,9 +63,11 @@ Item {
   AppProperty { id: trackEndWarningProp; path: "app.traktor.decks." + deckIdx + ".track.track_end_warning" }
 
   AppProperty { id: remixBeatPosProp; path: "app.traktor.decks." + deckIdx + ".remix.current_beat_pos" }
-  AppProperty { id: nextCuePointProp; path: "app.traktor.decks." + deckIdx + ".track.player.next_cue_point" }
+  readonly property string  beatPositionString:   remixBeatPosProp.description
+
   AppProperty { id: trackBPMProp;      path: "app.traktor.decks." + deckIdx + ".tempo.base_bpm" }
 
+  AppProperty { id: nextCuePointProp; path: "app.traktor.decks." + deckIdx + ".track.player.next_cue_point" }
   readonly property double cuePos: (nextCuePointProp.value >= 0) ? nextCuePointProp.value : trackLengthProp.value * 1000
   readonly property string beatsToCue: computeBarsBeatsFromPosition(((elapsedTimeProp.value * 1000 - cuePos) * trackBPMProp.value) / 60000.0)
 
@@ -150,7 +153,7 @@ Item {
 
         // Remaining/Elapsed Time
         ThinText {
-            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift && !customBeatCounterEngaged
+            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift && !customBeatCounterEngaged && !isRemixDeck
 
             anchors {
                 top: parent.top
@@ -163,13 +166,12 @@ Item {
             text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
             // text: " " + customBeatCounterEngaged ? (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : beatsToCue) : (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : remainingTime)
             // remixBeatPosProp
-            // (deckTypeProp.value === DeckType.Remix)
             color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
         }
 
-        // Remaining/Elapsed [Bars].[Beats]
+        // Remaining/Elapsed [Phrases].[Bars].[Beats]
         ThinText {
-            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift && customBeatCounterEngaged
+            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift && customBeatCounterEngaged && !isRemixDeck
 
             anchors {
                 top: parent.top
@@ -180,6 +182,22 @@ Item {
             font.pixelSize: 32
             font.capitalization: Font.AllUppercase
             text: " " + (deckDisplayMainInfo == elapsedTimeInfo ? elapsedTime : beatsToCue)
+            color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
+        }
+
+        // Remix Deck Beat Counter
+        ThinText {
+            visible: (deckDisplayMainInfo != loopSizeInfo) && !shift && isRemixDeck
+
+            anchors {
+                top: parent.top
+                left: parent.left
+                leftMargin: -13
+                topMargin: 19
+            }
+            font.pixelSize: 32
+            font.capitalization: Font.AllUppercase
+            text: " " + beatPositionString
             color: !trackEndWarningProp.value || screen.blinkOnOff ? "white" : "black"
         }
 
