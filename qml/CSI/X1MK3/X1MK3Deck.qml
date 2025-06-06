@@ -728,46 +728,39 @@ Module
   {
     enabled: module.active && module.shift && (deckTypeProp.value == DeckType.Remix) && ((customBrowserModeProp.value && !browserModeProp.value.value) || (!customBrowserModeProp.value && (loopShiftAction == key_adjust)))
 
-    Wire { from: "%surface%.loop.push";  to: HoldPropertyAdapter  { path: propertiesPath + ".quantize_engaged"; value: true } }
-    Wire { from: "%surface%.loop.push";  to: TogglePropertyAdapter  { path: "app.traktor.decks." + module.deckIdx + ".remix.quant" } }
-    // Wire {
-      // from: "%surface%.loop.push"
-      // to: ButtonScriptAdapter {
-        // onPress: {
-        // }
-        // onRelease: {
-          // module.quantizeEngaged = false;
-          // if (module.resetQuantizeEngaged)
-          // {
-            // if (module.isSlaveDeck) {
-              // clockBPMProp.value = trackBaseBPMProp.value;
-            // }
-            // else tempoAdjProp.value = 0.0
-          // }
-        // }
-      // }
-    // }
+    // Wire { from: "%surface%.loop.push";  to: HoldPropertyAdapter  { path: propertiesPath + ".quantize_engaged"; value: true } }
+    // Wire { from: "%surface%.loop.push";  to: TogglePropertyAdapter  { path: "app.traktor.decks." + module.deckIdx + ".remix.quant" } }
+    Wire {
+      from: "%surface%.loop.push"
+      to: ButtonScriptAdapter {
+        onPress: {
+          module.resetQuantizeEngaged = true
+          quantizeEngagedProp.value = true
+        }
+        onRelease: {
+          module.quantizeEngaged = false;
+          quantizeEngagedProp.value = false
+          if (module.resetQuantizeEngaged) {
+            remixQuantProp.value = !remixQuantProp.value
+            module.resetQuantizeEngaged = false
+          }
+        }
+      }
+    }
     
     Wire { from: "%surface%.loop.turn";  to: "remix.capture_source"; enabled: !quantizeEngagedProp.value }
     
-    Wire { from: "%surface%.loop.turn"; to: EncoderScriptAdapter { onTick: { remixQuantProp.value = true } } enabled: quantizeEngagedProp.value }
-    // Wire {
-      // from: "%surface%.loop.turn"
-      // to: EncoderScriptAdapter {
-        // onTick: {
-          // module.resetQuantizeEngaged = false;
-          // remixQuantProp.value = true;
-        // }
-        // onIncrement: {
-          // if (module.isSlaveDeck) clockBPMProp.value = clockBPMProp.value + (module.quantizeEngaged ? 1 : 0.01)
-          // else bpmProp.value = bpmProp.value + (module.quantizeEngaged ? 1 : 0.01)
-        // }
-        // onDecrement: {
-          // if (module.isSlaveDeck) clockBPMProp.value = clockBPMProp.value - (module.quantizeEngaged ? 1 : 0.01)
-          // else bpmProp.value = bpmProp.value - (module.quantizeEngaged ? 1 : 0.01)
-        // }
-      // }
-    // }
+    // Wire { from: "%surface%.loop.turn"; to: EncoderScriptAdapter { onTick: { remixQuantProp.value = true } } enabled: quantizeEngagedProp.value }
+    Wire {
+      enabled: quantizeEngagedProp.value
+      from: "%surface%.loop.turn"
+      to: EncoderScriptAdapter {
+        onTick: {
+          module.resetQuantizeEngaged = false;
+          remixQuantProp.value = true;
+        }
+      }
+    }
 
     
     Wire { from: "%surface%.loop.turn";  to: RelativePropertyAdapter { path:"app.traktor.decks." + module.deckIdx + ".remix.quant_index"; mode: RelativeMode.Stepped } enabled: quantizeEngagedProp.value }
